@@ -84,6 +84,12 @@ PY
           echo "body<<EOF" >> $GITHUB_OUTPUT
           cat release_body.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+      - name: Ensure PYPI API token present
+        run: |
+          if [ -z "${{ secrets.PYPI_API_TOKEN }}" ]; then
+            echo "::error::Missing required secret PYPI_API_TOKEN. Create it at Settings → Secrets → Actions with a PyPI API token (not your account password)."
+            exit 1
+          fi
       - name: Create GitHub Release and upload artifacts
         id: create_release
         uses: softprops/action-gh-release@v1
