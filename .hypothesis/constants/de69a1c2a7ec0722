@@ -1,0 +1,4 @@
+# file: /workspaces/CanadaLottoGenerator/canada_lotto_generator/generator.py
+# hypothesis_version: 6.148.7
+
+['numbers must be >= 1']

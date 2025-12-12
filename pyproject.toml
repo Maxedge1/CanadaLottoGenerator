@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canada-lotto-generator"
+version = "0.1.0"
+description = "Small CLI to generate Canadian-style Lotto numbers"
+requires-python = ">=3.8"
+authors = [ {name = "Maxedge1"} ]
+ license = "MIT"
+license-files = ["LICENSE"]
+ readme = "README.md"
+ keywords = ["lotto", "lottery", "canada", "cli"]
+ classifiers = [
+	 "Programming Language :: Python :: 3",
+	 "Programming Language :: Python :: 3 :: Only",
+	 "Programming Language :: Python :: 3.10",
+	 "Programming Language :: Python :: 3.11",
+	 "Programming Language :: Python :: 3.12",
+	 "Operating System :: OS Independent",
+ ]
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+
+[project.optional-dependencies]
+dev = ["pytest", "hypothesis", "pytest-cov", "ruff", "black", "mypy", "pre-commit", "bump2version", "mkdocs", "mkdocs-material"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.lint.ruff]
+extend-select = ["E", "F", "W", "I"]
+
+[tool.black]
+line-length = 88
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
