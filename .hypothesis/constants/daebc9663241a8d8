@@ -1,0 +1,4 @@
+# file: /workspaces/CanadaLottoGenerator/canada_lotto_generator/cli.py
+# hypothesis_version: 6.148.7
+
+['--bonus', '--format', '--num-draws', '--numbers', '--preset', '--range', '--seed', '-k', '-n', '-r', '649', 'Output format', 'bonus', 'canada-lotto', 'json', 'lotto-max', 'max', 'numbers', 'store_true', 'text']

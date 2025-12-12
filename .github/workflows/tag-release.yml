@@ -1,0 +1,128 @@
+name: Tag Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip build
+      - name: Build package
+        run: python -m build
+      - name: Extract changelog or Draft Release body for tag
+        id: changelog
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "Looking for Draft release body for tag: $TAG"
+          # Try to get an existing release for this tag
+          release=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG") || true
+          body=$(python -c "import sys,json
+data=sys.stdin.read()
+try:
+    obj=json.loads(data)
+    print(obj.get('body') or '')
+except Exception:
+    print('')
+") <<<'$release'
+
+          if [ -n "$body" ]; then
+            echo "Found release body for tag"
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            echo "$body" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "No release body for tag; searching for Draft release from Release Drafter"
+          releases=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/releases") || true
+          draft_body=$(python - <<PY
+import sys,json
+data=json.load(sys.stdin)
+for r in data:
+    if r.get('draft'):
+        # Prefer a draft with no tag_name (Release Drafter uses empty tag_name for drafts)
+        if not r.get('tag_name'):
+            print(r.get('body') or '')
+            sys.exit(0)
+        # or if the name contains 'Unreleased' or similar
+        name=r.get('name') or ''
+        if 'Unreleased' in name or 'Draft' in name:
+            print(r.get('body') or '')
+            sys.exit(0)
+print('')
+PY
+ < <(printf '%s' "$releases") ) || true
+
+          if [ -n "$draft_body" ]; then
+            echo "Found Draft release body"
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            echo "$draft_body" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Fallback to extracting from CHANGELOG.md
+          echo "No Draft found; extracting from CHANGELOG.md"
+          if grep -q "## \[${VERSION}\]" CHANGELOG.md; then
+            awk "/## \[${VERSION}\]/ {flag=1; next} /^## \[/ {if(flag) exit} flag{print}" CHANGELOG.md > release_body.txt || true
+          elif grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            awk '/## \[Unreleased\]/{flag=1; next} /^## \[/{if(flag) exit} flag{print}' CHANGELOG.md > release_body.txt || true
+          else
+            echo "No changelog entry found for ${VERSION}" > release_body.txt
+          fi
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          cat release_body.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Create GitHub Release and upload artifacts
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          body: ${{ steps.changelog.outputs.body }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post changelog as release comment if body empty
+        if: steps.create_release.outcome == 'success'
+        env:
+          RELEASE_ID: ${{ steps.create_release.outputs.id }}
+          BODY: ${{ steps.changelog.outputs.body }}
+        run: |
+          if [ -z "$BODY" ]; then
+            echo "No body provided for release; using extracted changelog"
+            BODY=$(cat release_body.txt || echo '')
+          fi
+          if [ -n "$BODY" ]; then
+            python - <<PY
+import os, json, urllib.request
+repo=os.environ['GITHUB_REPOSITORY']
+token=os.environ['GITHUB_TOKEN']
+rid=os.environ['RELEASE_ID']
+body=os.environ['BODY']
+data=json.dumps({"body": body}).encode()
+req=urllib.request.Request(
+    f"https://api.github.com/repos/{repo}/releases/{rid}/comments",
+    data=data,
+    headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "Content-Type": "application/json"},
+)
+resp=urllib.request.urlopen(req)
+print(resp.read().decode())
+PY
+          else
+            echo "No body to post as comment; skipping."
+          fi
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

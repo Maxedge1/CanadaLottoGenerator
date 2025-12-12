@@ -1,0 +1,8 @@
+site_name: CanadaLottoGenerator
+nav:
+  - Home: index.md
+  - Usage: usage.md
+  - CLI: cli.md
+  - API: api.md
+theme:
+  name: material

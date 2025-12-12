@@ -1,0 +1,26 @@
+name: Release Drafter
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [closed]
+
+template: |
+  ## What's Changed
+  $CHANGES
+
+change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+categories:
+  - title: 'Added'
+    labels:
+      - enhancement
+  - title: 'Fixed'
+    labels:
+      - bug
+  - title: 'Documentation'
+    labels:
+      - docs
+  - title: 'Other'
+    labels: []
+published: true
