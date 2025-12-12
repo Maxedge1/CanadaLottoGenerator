@@ -8,9 +8,9 @@ version = "0.1.0"
 description = "Small CLI to generate Canadian-style Lotto numbers"
 requires-python = ">=3.8"
 authors = [ {name = "Maxedge1"} ]
- license = "MIT"
+license = "MIT"
 license-files = ["LICENSE"]
- readme = "README.md"
+readme = "README.md"
  keywords = ["lotto", "lottery", "canada", "cli"]
  classifiers = [
 	 "Programming Language :: Python :: 3",
@@ -42,3 +42,6 @@ python_version = "3.12"
 check_untyped_defs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
+
+[tool.setuptools.packages.find]
+exclude = ["site", "docs", "tests", "tests.*"]
